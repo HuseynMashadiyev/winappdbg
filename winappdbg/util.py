@@ -75,7 +75,7 @@ __all__ = [
 import os
 import optparse
 
-import win32
+from . import win32
 
 # Cygwin compatibility.
 try:
@@ -138,12 +138,12 @@ class Regenerator(object):
         'x.__iter__() <==> iter(x)'
         return self
 
-    def next(self):
+    def __next__(self):
         'x.next() -> the next value, or raise StopIteration'
         if self.__g_object is None:
             self.__g_object = self.__g_function( *self.__v_args, **self.__d_args )
         try:
-            return self.__g_object.next()
+            return next(self.__g_object)
         except StopIteration:
             self.__g_object = None
             raise
@@ -294,28 +294,30 @@ class PathOperations (StaticClass):
         # XXX TODO
         # There are probably some native paths that
         # won't be converted by this naive approach.
-        if name.startswith("\\"):
-            if name.startswith("\\??\\"):
+
+        if name.startswith(b"\\"):
+            if name.startswith(b"\\??\\"):
                 name = name[4:]
-            elif name.startswith("\\SystemRoot\\"):
+            elif name.startswith(b"\\SystemRoot\\"):
                 system_root_path = os.environ['SYSTEMROOT']
                 if system_root_path.endswith('\\'):
                     system_root_path = system_root_path[:-1]
                 name = system_root_path + name[11:]
             else:
-                for drive_number in xrange(ord('A'), ord('Z') + 1):
-                    drive_letter = '%c:' % drive_number
+                for drive_number in range(ord('A'), ord('Z') + 1):
+                    #drive_letter = ('%c:' % drive_number).encode()
+                    drive_letter = b'%c:' % drive_number
                     try:
                         device_native_path = win32.QueryDosDevice(drive_letter)
-                    except WindowsError, e:
+                    except WindowsError as e:
                         if e.winerror in (win32.ERROR_FILE_NOT_FOUND, \
                                                  win32.ERROR_PATH_NOT_FOUND):
                             continue
                         raise
-                    if not device_native_path.endswith('\\'):
-                        device_native_path += '\\'
+                    if not device_native_path.endswith(b'\\'):
+                        device_native_path += b'\\'
                     if name.startswith(device_native_path):
-                        name = drive_letter + '\\' + \
+                        name = drive_letter + b'\\' + \
                                               name[ len(device_native_path) : ]
                         break
         return name
@@ -603,6 +605,18 @@ def ExecutableAndWriteableAddressIterator(memory_map):
 
 #==============================================================================
 
+try:
+        registerMask = win32.SIZE_T(-1).value
+except TypeError:
+        if win32.SIZEOF(win32.SIZE_T) == 4:
+            print("Size is 4")
+            registerMask = 0xFFFFFFFF
+        elif win32.SIZEOF(win32.SIZE_T) == 8:
+            print("Size is 8")
+            registerMask = 0xFFFFFFFFFFFFFFFF
+        else:
+            print("Boombastic")
+            raise
 class DebugRegister (StaticClass):
     """
     Class to manipulate debug registers.
@@ -720,16 +734,7 @@ class DebugRegister (StaticClass):
     WATCH_WORD  = 1
     WATCH_DWORD = 3
     WATCH_QWORD = 2
-
-    try:
-        registerMask = win32.SIZE_T(-1).value
-    except TypeError:
-        if win32.SIZEOF(win32.SIZE_T) == 4:
-            registerMask = 0xFFFFFFFF
-        elif win32.SIZEOF(win32.SIZE_T) == 8:
-            registerMask = 0xFFFFFFFFFFFFFFFF
-        else:
-            raise
+    
 
 #------------------------------------------------------------------------------
 
@@ -766,7 +771,6 @@ class DebugRegister (StaticClass):
 
     # Dr7 &= disableMask[register]
     disableMask = tuple( [registerMask ^ x for x in enableMask] )
-    del x
 
     # orMask, andMask = triggerMask[register][trigger]
     # Dr7 = (Dr7 & andMask) | orMask    # to set

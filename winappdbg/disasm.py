@@ -39,7 +39,7 @@ Binary code disassembly.
     LibdisassembleEngine, PyDasmEngine
 """
 
-from __future__ import with_statement
+
 
 __all__ = [
     'Disassembler',
@@ -51,8 +51,8 @@ __all__ = [
     'PyDasmEngine',
 ]
 
-from textio import HexDump
-import win32
+from .textio import HexDump
+from . import win32
 
 import ctypes
 import warnings
@@ -198,7 +198,8 @@ class BeaEngine (Engine):
         addressof = ctypes.addressof
 
         # Instance the code buffer.
-        buffer = ctypes.create_string_buffer(code)
+        
+        buffer = ctypes.create_string_buffer(code.encode())
         buffer_ptr = addressof(buffer)
 
         # Instance the disassembler structure.
@@ -218,6 +219,8 @@ class BeaEngine (Engine):
         # Prepare for looping over each instruction.
         result = []
         Disasm = BeaEnginePython.Disasm
+        Disasm.argtypes = (ctypes.c_void_p,)
+
         InstructionPtr = addressof(Instruction)
         hexdump = HexDump.hexadecimal
         append = result.append
@@ -262,7 +265,7 @@ class BeaEngine (Engine):
 
                 # Output each byte as a "db" instruction.
                 for char in buffer[ offset : offset + len(code) ]:
-                    char = "%.2X" % ord(char)
+                    char = "%.2X" % char
                     result.append((
                         Instruction.VirtualAddr,
                         1,
@@ -691,8 +694,7 @@ class Disassembler (object):
 
         # Use the default architecture if none specified.
         if not arch:
-            arch = win32.arch
-
+            arch = win32.arc
         # Return a compatible engine if none specified.
         if not engine:
             found = False
@@ -702,10 +704,11 @@ class Disassembler (object):
                         selected = (clazz.name, arch)
                         try:
                             decoder = cls.__decoder[selected]
+                            return decoder
                         except KeyError:
                             decoder = clazz(arch)
                             cls.__decoder[selected] = decoder
-                        return decoder
+                            return decoder
                 except NotImplementedError:
                     pass
             msg = "No disassembler engine available for %s code." % arch

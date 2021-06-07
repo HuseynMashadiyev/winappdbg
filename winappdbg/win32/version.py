@@ -34,7 +34,7 @@ Detect the current architecture and operating system.
 Some functions here are really from kernel32.dll, others from version.dll.
 """
 
-from defines import *  # NOQA
+from .defines import *  # NOQA
 
 #==============================================================================
 # This is used later on to calculate the list of exported symbols.
@@ -150,9 +150,9 @@ def GetFileVersionInfoA(lptstrFilename):
     _GetFileVersionInfoSizeA.restype  = DWORD
     _GetFileVersionInfoSizeA.errcheck = RaiseIfZero
 
-    dwLen = _GetFileVersionInfoSizeA(lptstrFilename, None)
+    dwLen = _GetFileVersionInfoSizeA(lptstrFilename.encode(), None)
     lpData = ctypes.create_string_buffer(dwLen)
-    _GetFileVersionInfoA(lptstrFilename, 0, dwLen, byref(lpData))
+    _GetFileVersionInfoA(lptstrFilename.encode(), 0, dwLen, byref(lpData))
     return lpData
 
 def GetFileVersionInfoW(lptstrFilename):
@@ -187,7 +187,7 @@ def VerQueryValueA(pBlock, lpSubBlock):
 
     lpBuffer = LPVOID(0)
     uLen = UINT(0)
-    _VerQueryValueA(pBlock, lpSubBlock, byref(lpBuffer), byref(uLen))
+    _VerQueryValueA(pBlock, lpSubBlock.encode(), byref(lpBuffer), byref(uLen))
     return lpBuffer, uLen.value
 
 def VerQueryValueW(pBlock, lpSubBlock):
@@ -782,7 +782,7 @@ def GetModuleFileNameW(hProcess, hModule = None):
 
     nSize = MAX_PATH
     while 1:
-        lpFilename = ctypes.create_unicode_buffer(u"", nSize)
+        lpFilename = ctypes.create_unicode_buffer("", nSize)
         nCopied = _GetModuleFileNameW(hModule, lpFilename, nSize)
         if nCopied == 0:
             raise ctypes.WinError()
@@ -822,7 +822,7 @@ def GetFullPathNameW(lpFileName):
     nBufferLength = _GetFullPathNameW(lpFileName, 0, None, None)
     if nBufferLength <= 0:
         raise ctypes.WinError()
-    lpBuffer   = ctypes.create_unicode_buffer(u'', nBufferLength + 1)
+    lpBuffer   = ctypes.create_unicode_buffer('', nBufferLength + 1)
     lpFilePart = LPWSTR()
     nCopied = _GetFullPathNameW(lpFileName, nBufferLength, lpBuffer, byref(lpFilePart))
     if nCopied > nBufferLength or nCopied == 0:

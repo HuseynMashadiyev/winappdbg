@@ -56,7 +56,7 @@ class Tracer( EventHandler ):
     def __trace(self, event):
         if self.options.mode in ("trace", "branch"):
             event.debug.start_tracing( event.get_tid() )
-            self.__branch(event)
+            #self.__branch(event)
 
     # Branch mode
     def __branch(self, event):
@@ -93,10 +93,10 @@ class Tracer( EventHandler ):
         ctx    = thread.get_context(win32.CONTEXT_FULL)
         if not label:
             label = thread.get_label_at_pc()
-        print label
-        print CrashDump.dump_registers(ctx)
-        print CrashDump.dump_stack_trace_with_labels(trace),
-        print "-" * 79
+        print(label)
+        print(CrashDump.dump_registers(ctx))
+        print(CrashDump.dump_stack_trace_with_labels(trace), end=' ')
+        print("-" * 79)
 
     # Disassemble the current instruction
     # TODO also show the contents of any register used, and follow pointers
@@ -109,22 +109,23 @@ class Tracer( EventHandler ):
             pc  = thread.get_pc()
         code    = thread.disassemble( pc, 0x10 ) [0]
         line    = CrashDump.dump_code_line(code, dwDumpWidth=8*2)
-        print "~%d %s" % ( tid, line )
+        print("~%d %s" % ( tid, line ))
 
     # Events
 
     def create_process( self, event ):
+        print("Create Process : ", event)
         self.__trace(event)
 
     def create_thread( self, event ):
+        print("Create Thread : ", event)
         self.__trace(event)
 
     def load_dll( self, event ):
+        print("Loading DLL : ", event.get_filename())
         self.__syscall(event)
 
-    def single_step( self, event ):
-        self.__branch(event)
-        self.__disasm(event)
+
 
     # Breakpoints
 
@@ -294,7 +295,7 @@ def parse_cmdline( argv ):
                 process = Process(dwProcessId)
                 process.open_handle()
                 process.close_handle()
-            except WindowsError, e:
+            except WindowsError as e:
                 parser.error("can't open process %d: %s" % (dwProcessId, e))
             attach_targets.append(dwProcessId)
         else:
@@ -307,7 +308,7 @@ def parse_cmdline( argv ):
                     process = Process(dwProcessId)
                     process.open_handle()
                     process.close_handle()
-                except WindowsError, e:
+                except WindowsError as e:
                     parser.error("can't open process %d: %s" % (dwProcessId, e))
                 attach_targets.append( process.get_pid() )
     options.attach = attach_targets
@@ -321,7 +322,7 @@ def parse_cmdline( argv ):
         if not ntpath.exists(filename):
             try:
                 filename = win32.SearchPath(None, filename, '.exe')[0]
-            except WindowsError, e:
+            except WindowsError as e:
                 parser.error("error searching for %s: %s" % (filename, str(e)))
             vector[0] = filename
         console_targets.append(vector)
@@ -336,7 +337,7 @@ def parse_cmdline( argv ):
         if not ntpath.exists(filename):
             try:
                 filename = win32.SearchPath(None, filename, '.exe')[0]
-            except WindowsError, e:
+            except WindowsError as e:
                 parser.error("error searching for %s: %s" % (filename, str(e)))
             vector[0] = filename
         windowed_targets.append(vector)
